@@ -113,6 +113,7 @@
     </div>
 
     <div class="msg" id="msg"></div>
+    <button class="ghost" id="openfolder" style="display:none;width:100%;margin-top:12px"></button>
     <a class="primary dl" id="dl" style="display:none"></a>
   </div>
 
@@ -125,6 +126,10 @@
           <input id="api" type="text" dir="ltr" placeholder="http://localhost:8000">
           <button class="ghost" id="saveapi">שמירה</button>
         </div>
+      </div>
+      <div class="sec">
+        <button class="ghost" id="upd">עדכון רכיב ההורדה (yt-dlp)</button>
+        <small id="updmsg" style="margin-inline-start:8px"></small>
       </div>
     </details>
     <span class="status"><span class="dot" id="dot"></span><span id="st">בודק חיבור…</span></span>
@@ -161,7 +166,12 @@ function hideMsg() { $('msg').className = 'msg'; }
 const esc = s => s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
 async function api(path, body) {
-  const r = await fetch(API + path, body ? { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) } : undefined);
+  let r;
+  try {
+    r = await fetch(API + path, body ? { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) } : undefined);
+  } catch {
+    throw new Error('אין חיבור לשרת המקומי. הפעילו את התוכנה מתפריט התחל.');
+  }
   const j = await r.json();
   if (!r.ok) throw new Error(j.error || 'שגיאה');
   return j;
@@ -170,11 +180,12 @@ async function api(path, body) {
 async function health() {
   try {
     const h = await api('/api/health');
-    $('dot').className = 'dot up'; $('st').textContent = 'מחובר לשרת';
+    $('dot').className = 'dot up'; $('st').textContent = 'מחובר לשרת' + (h.ytdlp_version ? ' · yt-dlp ' + h.ytdlp_version : '');
     if (!h.ffmpeg) show('warn', 'ffmpeg לא מותקן בשרת — חיבור וידאו+אודיו והמרה ל-MP3 לא יעבדו.');
+    else if (!h.ytdlp) show('warn', 'רכיב yt-dlp חסר בשרת — התקינו מחדש את התוכנה.');
   } catch {
     $('dot').className = 'dot down';
-    $('st').textContent = 'אין חיבור לשרת. הריצו python server.py';
+    $('st').innerHTML = 'אין חיבור לשרת. הפעילו את התוכנה מתפריט התחל, או <a href="https://github.com/hershale/download-youtube-playlists/releases/latest/download/Setup.exe">הורידו והתקינו אותה</a>.';
     if (isPages) $('settings').open = true;
   }
 }
@@ -199,7 +210,7 @@ $('url').addEventListener('paste', () => setTimeout(check, 50));
 $('url').addEventListener('keydown', e => { if (e.key === 'Enter') check(); });
 
 $('go').onclick = async () => {
-  const url = $('url').value.trim(); hideMsg(); $('dl').style.display = 'none';
+  const url = $('url').value.trim(); hideMsg(); $('dl').style.display = 'none'; $('openfolder').style.display = 'none';
   if (!url) return show('err', 'הדביקו קישור קודם');
   try {
     const { id } = await api('/api/jobs', { url, mode, quality: $('quality').value });
@@ -225,12 +236,19 @@ function finish(j) {
   clearInterval(timer); $('go').disabled = false;
   if (j.status === 'done') {
     $('fill').style.width = '100%'; $('pct').textContent = '100%';
-    show('ok', `הושלם: ${j.files} קבצים${j.errors ? ` (${j.errors} נכשלו)` : ''}`);
-    const a = $('dl'); a.href = `${API}/api/jobs/${jobId}/zip`; a.textContent = '📦 הורדת קובץ ה-ZIP'; a.style.display = 'block';
+    show('ok', `הושלם: ${j.files} קבצים${j.errors ? ` (${j.errors} נכשלו)` : ''}${j.saved_path ? `. נשמר ב: ${j.saved_path}` : ''}`);
+    if (j.saved_path) { const o = $('openfolder'); o.textContent = '📂 פתיחת התיקייה'; o.style.display = 'block'; }
+    const a = $('dl'); a.href = `${API}/api/jobs/${jobId}/zip`; a.textContent = j.saved_path ? '📦 שמירה נוספת דרך הדפדפן' : '📦 הורדת קובץ ה-ZIP'; a.style.display = 'block';
   } else if (j.status === 'cancelled') { show('warn', 'ההורדה בוטלה'); $('prog').style.display = 'none'; }
   else show('err', j.error || 'שגיאה');
 }
 
+$('openfolder').onclick = () => api('/api/open-folder', {}).catch(e => show('err', e.message));
+$('upd').onclick = async () => {
+  $('updmsg').textContent = 'מעדכן…';
+  try { const r = await api('/api/update', {}); $('updmsg').textContent = r.message; health(); }
+  catch (e) { $('updmsg').textContent = e.message; }
+};
 $('cancel').onclick = async () => { if (jobId) await api(`/api/jobs/${jobId}/cancel`, {}); };
 $('logbtn').onclick = () => { const l = $('log'); l.style.display = l.style.display === 'block' ? 'none' : 'block'; };
 </script>

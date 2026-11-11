@@ -1,0 +1,11 @@
+רכיבי צד שלישי המצורפים למתקין (Third-party components bundled with the installer)
+
+yt-dlp          - Unlicense (public domain)        https://github.com/yt-dlp/yt-dlp
+FFmpeg/FFprobe  - GPL v3 build by BtbN              https://github.com/BtbN/FFmpeg-Builds
+                  License text: bin\FFMPEG-LICENSE.txt
+                  Source code:  https://ffmpeg.org/download.html and the build scripts above
+Deno            - MIT                               https://github.com/denoland/deno
+Python runtime  - PSF License (via PyInstaller)     https://www.python.org/
+
+הכלים האלה אינם חלק מהקוד של הפרויקט, והם מופעלים כתהליכים נפרדים.
+The tools above are separate programs launched as separate processes.

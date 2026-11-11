@@ -1,2 +1,7 @@
 __pycache__/
 *.pyc
+build/
+dist/
+dist-installer/
+*.spec
+selftest*.txt
