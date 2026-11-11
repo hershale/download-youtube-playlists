@@ -2,6 +2,7 @@ name: Build Windows installer
 
 on:
   push:
+    branches: [main]
     tags: ["v*"]
   workflow_dispatch:
 
@@ -52,8 +53,15 @@ jobs:
         shell: pwsh
         run: |
           $env:PATH = "$env:SystemRoot\System32;$env:SystemRoot"
-          $p = Start-Process "dist\YTPlaylistDownloader\YTPlaylistDownloader.exe" -ArgumentList "--selftest", "$PWD\selftest-portable.txt" -Wait -PassThru
-          Get-Content selftest-portable.txt
+          $out = "$PWD\selftest-portable.txt"
+          $p = Start-Process "dist\YTPlaylistDownloader\YTPlaylistDownloader.exe" -ArgumentList "--selftest", $out -Wait -PassThru
+          Write-Host "exit code: $($p.ExitCode)"
+          if (Test-Path $out) {
+            Get-Content $out -Encoding UTF8
+            Get-Content $out -Encoding UTF8 | Where-Object { $_ -match "^FAIL" -or $_ -match "^RESULT" } | ForEach-Object { Write-Host "::error::$_" }
+          } else {
+            Write-Host "::error::exe produced no result file (crashed on start), exit code $($p.ExitCode)"
+          }
           if ($p.ExitCode -ne 0) { throw "self-test failed" }
 
       - name: Install Inno Setup
@@ -84,7 +92,11 @@ jobs:
           "OK   Start Menu shortcut"
           $env:PATH = "$env:SystemRoot\System32;$env:SystemRoot"
           $t = Start-Process (Join-Path $dir "YTPlaylistDownloader.exe") -ArgumentList "--selftest", "$env:RUNNER_TEMP\selftest-installed.txt" -Wait -PassThru
-          Get-Content "$env:RUNNER_TEMP\selftest-installed.txt"
+          $res = "$env:RUNNER_TEMP\selftest-installed.txt"
+          if (Test-Path $res) {
+            Get-Content $res -Encoding UTF8
+            Get-Content $res -Encoding UTF8 | Where-Object { $_ -match "^FAIL" } | ForEach-Object { Write-Host "::error::$_" }
+          } else { Write-Host "::error::installed exe produced no result file" }
           if ($t.ExitCode -ne 0) { throw "installed self-test failed" }
           Start-Process (Join-Path $dir "unins000.exe") -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES" -Wait
           for ($i = 0; $i -lt 30 -and (Test-Path (Join-Path $dir "YTPlaylistDownloader.exe")); $i++) { Start-Sleep 1 }

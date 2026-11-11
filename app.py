@@ -73,10 +73,11 @@ def selftest(result_path):
             inside = bool(p) and Path(p).resolve().parent == server.BIN_DIR.resolve()
             check(f"{tool} נמצא בתיקיית ההתקנה", inside or (not server.FROZEN and bool(p)), p or "")
             if p:
-                r = subprocess.run([p, "--version"], capture_output=True, text=True,
-                                   timeout=60, **server.run_kw())
+                flag = "-version" if tool in ("ffmpeg", "ffprobe") else "--version"
+                r = subprocess.run([p, flag], capture_output=True, text=True, encoding="utf-8",
+                                   errors="replace", timeout=90, **server.run_kw())
                 first = (r.stdout or r.stderr).strip().splitlines()[:1]
-                check(f"{tool} --version", r.returncode == 0, first[0] if first else "")
+                check(f"{tool} {flag}", r.returncode == 0, f"rc={r.returncode} " + (first[0] if first else ""))
         check("docs מצורפים", (server.WEB / "index.html").is_file(), str(server.WEB))
 
         st, data = req(port, "GET", "/api/health", {"Origin": server.SITE_ORIGIN})
@@ -230,7 +231,12 @@ def main():
     args = sys.argv[1:]
     if args and args[0] == "--selftest":
         out = args[1] if len(args) > 1 else str(Path(tempfile.gettempdir()) / "ytpd-selftest.txt")
-        return selftest(out)
+        try:
+            Path(out).write_text("STARTED\n", encoding="utf-8")
+            return selftest(out)
+        except Exception:  # noqa: BLE001
+            Path(out).write_text("FAIL  crash\n" + traceback.format_exc() + "RESULT: FAILED\n", encoding="utf-8")
+            return 1
     try:
         return run_gui()
     except Exception:  # noqa: BLE001
