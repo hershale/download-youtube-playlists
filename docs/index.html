@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>מוריד פלייליסטים</title>
+<style>
+  :root {
+    --bg: #f6f7fb; --card: #ffffff; --text: #151822; --muted: #6b7180;
+    --line: #e4e7ef; --accent: #5b5bf0; --accent-2: #8a5cf6; --ok: #16a34a; --err: #dc2626;
+    --shadow: 0 10px 40px rgba(30, 30, 80, .08);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0e1016; --card: #171a23; --text: #eceef5; --muted: #8d93a5;
+      --line: #262a37; --shadow: 0 10px 40px rgba(0, 0, 0, .4);
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; background: var(--bg); color: var(--text);
+    font-family: system-ui, -apple-system, "Segoe UI", Heebo, Arial, sans-serif;
+    display: flex; justify-content: center; padding: 32px 16px;
+    background-image: radial-gradient(60% 40% at 50% 0%, color-mix(in srgb, var(--accent) 14%, transparent), transparent);
+  }
+  main { width: 100%; max-width: 620px; }
+  h1 { font-size: 26px; margin: 0 0 6px; letter-spacing: -.3px; }
+  .sub { color: var(--muted); margin: 0 0 22px; }
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 20px;
+    padding: 22px; box-shadow: var(--shadow); margin-bottom: 16px;
+  }
+  label.t { display: block; font-size: 13px; font-weight: 600; color: var(--muted); margin: 0 0 8px; }
+  .row { display: flex; gap: 8px; }
+  input[type=text], select {
+    width: 100%; padding: 13px 14px; border-radius: 12px; border: 1px solid var(--line);
+    background: var(--bg); color: var(--text); font: inherit; outline: none;
+  }
+  input[type=text]:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent); }
+  input[dir=ltr] { text-align: left; }
+  button {
+    font: inherit; cursor: pointer; border: 0; border-radius: 12px; padding: 13px 18px; font-weight: 600;
+  }
+  .primary { background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #fff; width: 100%; font-size: 16px; padding: 15px; }
+  .primary:disabled { opacity: .5; cursor: not-allowed; }
+  .ghost { background: var(--bg); color: var(--text); border: 1px solid var(--line); white-space: nowrap; }
+  .seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; background: var(--bg); padding: 5px; border-radius: 14px; border: 1px solid var(--line); }
+  .seg button { background: transparent; color: var(--muted); padding: 10px 6px; font-size: 14px; }
+  .seg button.on { background: var(--card); color: var(--text); box-shadow: 0 2px 8px rgba(0,0,0,.12); }
+  .sec { margin-top: 18px; }
+  .info { display: none; margin-top: 16px; padding: 14px; border-radius: 14px; background: var(--bg); border: 1px solid var(--line); }
+  .info b { display: block; font-size: 16px; margin-bottom: 2px; }
+  .info small { color: var(--muted); }
+  .info ol { margin: 10px 0 0; padding-inline-start: 20px; color: var(--muted); font-size: 13px; }
+  .bar { height: 10px; border-radius: 99px; background: var(--bg); border: 1px solid var(--line); overflow: hidden; margin: 12px 0 8px; }
+  .bar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--accent), var(--accent-2)); transition: width .4s; }
+  #prog { display: none; }
+  .meta { display: flex; justify-content: space-between; font-size: 13px; color: var(--muted); gap: 10px; }
+  .meta span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; direction: ltr; }
+  .msg { display: none; margin-top: 12px; padding: 12px 14px; border-radius: 12px; font-size: 14px; }
+  .msg.err { display: block; background: color-mix(in srgb, var(--err) 12%, transparent); color: var(--err); }
+  .msg.ok { display: block; background: color-mix(in srgb, var(--ok) 12%, transparent); color: var(--ok); }
+  .msg.warn { display: block; background: color-mix(in srgb, #f59e0b 14%, transparent); color: #b45309; }
+  a.dl { display: block; text-align: center; text-decoration: none; margin-top: 12px; }
+  pre { direction: ltr; text-align: left; font-size: 12px; background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 10px; max-height: 160px; overflow: auto; color: var(--muted); display: none; white-space: pre-wrap; }
+  details { color: var(--muted); font-size: 13px; }
+  summary { cursor: pointer; }
+  .status { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); margin-top: 10px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+  .dot.up { background: var(--ok); } .dot.down { background: var(--err); }
+  footer { text-align: center; color: var(--muted); font-size: 12px; margin-top: 18px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>⬇️ מוריד פלייליסטים</h1>
+  <p class="sub">הדביקו קישור לפלייליסט מיוטיוב וקבלו הכול בקובץ ZIP אחד.</p>
+
+  <div class="card">
+    <label class="t" for="url">קישור לפלייליסט</label>
+    <div class="row">
+      <input id="url" type="text" dir="ltr" placeholder="https://www.youtube.com/playlist?list=..." autocomplete="off">
+      <button class="ghost" id="check">בדיקה</button>
+    </div>
+    <div class="info" id="info"></div>
+
+    <div class="sec">
+      <label class="t">מה להוריד?</label>
+      <div class="seg" id="mode">
+        <button data-m="both" class="on">וידאו + אודיו</button>
+        <button data-m="video">וידאו בלבד</button>
+        <button data-m="audio">אודיו בלבד</button>
+      </div>
+    </div>
+
+    <div class="sec">
+      <label class="t" for="quality" id="qlabel">איכות וידאו</label>
+      <select id="quality"></select>
+    </div>
+
+    <div class="sec">
+      <button class="primary" id="go">הורדה כ-ZIP</button>
+    </div>
+
+    <div id="prog">
+      <div class="bar"><i id="fill"></i></div>
+      <div class="meta"><span id="pct">0%</span><span id="cur"></span></div>
+      <div class="row" style="margin-top:10px">
+        <button class="ghost" id="cancel" style="flex:1">ביטול</button>
+        <button class="ghost" id="logbtn" style="flex:1">לוג</button>
+      </div>
+      <pre id="log"></pre>
+    </div>
+
+    <div class="msg" id="msg"></div>
+    <a class="primary dl" id="dl" style="display:none"></a>
+  </div>
+
+  <div class="card">
+    <details id="settings">
+      <summary>הגדרות שרת</summary>
+      <div class="sec">
+        <label class="t" for="api">כתובת השרת (ריק = אותו שרת שמגיש את הדף)</label>
+        <div class="row">
+          <input id="api" type="text" dir="ltr" placeholder="http://localhost:8000">
+          <button class="ghost" id="saveapi">שמירה</button>
+        </div>
+      </div>
+    </details>
+    <span class="status"><span class="dot" id="dot"></span><span id="st">בודק חיבור…</span></span>
+  </div>
+  <footer>להורדת תכנים שיש לכם זכות להוריד בלבד. השימוש באחריותכם ובהתאם לתנאי השימוש של יוטיוב.</footer>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+const isPages = location.hostname.endsWith('github.io');
+let API = localStorage.getItem('api') ?? (isPages ? 'http://localhost:8000' : '');
+let mode = 'both', jobId = null, timer = null;
+$('api').value = API;
+
+const VIDEO_Q = [['best','הכי גבוהה'],['2160','4K (2160p)'],['1440','1440p'],['1080','1080p'],['720','720p'],['480','480p'],['360','360p']];
+const AUDIO_Q = [['best','הכי גבוהה (MP3 VBR)'],['320','320 kbps'],['192','192 kbps'],['128','128 kbps']];
+
+function fillQuality() {
+  const list = mode === 'audio' ? AUDIO_Q : VIDEO_Q;
+  $('qlabel').textContent = mode === 'audio' ? 'איכות אודיו' : 'איכות וידאו';
+  $('quality').innerHTML = list.map(([v, t]) => `<option value="${v}"${v === (mode === 'audio' ? 'best' : '1080') ? ' selected' : ''}>${t}</option>`).join('');
+}
+fillQuality();
+
+$('mode').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  mode = b.dataset.m;
+  document.querySelectorAll('#mode button').forEach(x => x.classList.toggle('on', x === b));
+  fillQuality();
+});
+
+function show(kind, text) { const m = $('msg'); m.className = 'msg ' + kind; m.textContent = text; }
+function hideMsg() { $('msg').className = 'msg'; }
+const esc = s => s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+async function api(path, body) {
+  const r = await fetch(API + path, body ? { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) } : undefined);
+  const j = await r.json();
+  if (!r.ok) throw new Error(j.error || 'שגיאה');
+  return j;
+}
+
+async function health() {
+  try {
+    const h = await api('/api/health');
+    $('dot').className = 'dot up'; $('st').textContent = 'מחובר לשרת';
+    if (!h.ffmpeg) show('warn', 'ffmpeg לא מותקן בשרת — חיבור וידאו+אודיו והמרה ל-MP3 לא יעבדו.');
+  } catch {
+    $('dot').className = 'dot down';
+    $('st').textContent = 'אין חיבור לשרת. הריצו python server.py';
+    if (isPages) $('settings').open = true;
+  }
+}
+health();
+
+$('saveapi').onclick = () => { API = $('api').value.trim().replace(/\/$/, ''); localStorage.setItem('api', API); health(); };
+
+async function check() {
+  const url = $('url').value.trim(); hideMsg();
+  if (!url) return;
+  $('check').textContent = '…';
+  try {
+    const i = await api('/api/info', { url });
+    const items = i.items.filter(Boolean).map(t => `<li>${esc(t)}</li>`).join('');
+    $('info').style.display = 'block';
+    $('info').innerHTML = `<b>${esc(i.title)}</b><small>${i.count} ${i.count === 1 ? 'פריט' : 'פריטים'}${i.uploader ? ' · ' + esc(i.uploader) : ''}</small>${items ? '<ol>' + items + (i.count > 6 ? '<li>…</li>' : '') + '</ol>' : ''}`;
+  } catch (e) { $('info').style.display = 'none'; show('err', e.message); }
+  $('check').textContent = 'בדיקה';
+}
+$('check').onclick = check;
+$('url').addEventListener('paste', () => setTimeout(check, 50));
+$('url').addEventListener('keydown', e => { if (e.key === 'Enter') check(); });
+
+$('go').onclick = async () => {
+  const url = $('url').value.trim(); hideMsg(); $('dl').style.display = 'none';
+  if (!url) return show('err', 'הדביקו קישור קודם');
+  try {
+    const { id } = await api('/api/jobs', { url, mode, quality: $('quality').value });
+    jobId = id; $('go').disabled = true; $('prog').style.display = 'block';
+    $('fill').style.width = '0'; $('pct').textContent = '0%'; $('cur').textContent = '';
+    timer = setInterval(poll, 1000);
+  } catch (e) { show('err', e.message); }
+};
+
+async function poll() {
+  try {
+    const j = await api('/api/jobs/' + jobId);
+    const p = Math.round((j.progress || 0) * 100);
+    $('fill').style.width = p + '%';
+    $('pct').textContent = j.status === 'zipping' ? 'אורז ל-ZIP…' : `${p}% · ${j.index}/${j.total}`;
+    $('cur').textContent = j.current || '';
+    $('log').textContent = (j.log || []).join('\n');
+    if (['done', 'error', 'cancelled'].includes(j.status)) finish(j);
+  } catch (e) { finish({ status: 'error', error: e.message }); }
+}
+
+function finish(j) {
+  clearInterval(timer); $('go').disabled = false;
+  if (j.status === 'done') {
+    $('fill').style.width = '100%'; $('pct').textContent = '100%';
+    show('ok', `הושלם: ${j.files} קבצים${j.errors ? ` (${j.errors} נכשלו)` : ''}`);
+    const a = $('dl'); a.href = `${API}/api/jobs/${jobId}/zip`; a.textContent = '📦 הורדת קובץ ה-ZIP'; a.style.display = 'block';
+  } else if (j.status === 'cancelled') { show('warn', 'ההורדה בוטלה'); $('prog').style.display = 'none'; }
+  else show('err', j.error || 'שגיאה');
+}
+
+$('cancel').onclick = async () => { if (jobId) await api(`/api/jobs/${jobId}/cancel`, {}); };
+$('logbtn').onclick = () => { const l = $('log'); l.style.display = l.style.display === 'block' ? 'none' : 'block'; };
+</script>
+</body>
+</html>
