@@ -58,7 +58,7 @@ jobs:
           Write-Host "exit code: $($p.ExitCode)"
           if (Test-Path $out) {
             Get-Content $out -Encoding UTF8
-            Get-Content $out -Encoding UTF8 | Where-Object { $_ -match "^FAIL" -or $_ -match "^RESULT" } | ForEach-Object { Write-Host "::error::$_" }
+            Get-Content $out -Encoding UTF8 | Where-Object { $_ -match "^FAIL" -or $_ -match "^RESULT: FAILED" } | ForEach-Object { Write-Host "::error::$_" }
           } else {
             Write-Host "::error::exe produced no result file (crashed on start), exit code $($p.ExitCode)"
           }
