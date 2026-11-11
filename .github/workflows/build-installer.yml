@@ -1,4 +1,4 @@
-name: Build Windows installer
+name: Build Windows app (installer + portable)
 
 on:
   push:
@@ -19,8 +19,8 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install PyInstaller
-        run: python -m pip install pyinstaller
+      - name: Install PyInstaller and pywebview
+        run: python -m pip install pyinstaller pywebview
 
       - name: Download yt-dlp, FFmpeg and Deno
         shell: pwsh
@@ -38,7 +38,11 @@ jobs:
           Get-ChildItem build\bin | Format-Table Name, Length
 
       - name: Build app with PyInstaller
-        run: pyinstaller --noconfirm --clean --windowed --name YTPlaylistDownloader --add-data "docs;docs" app.py
+        run: >
+          pyinstaller --noconfirm --clean --windowed --name YTPlaylistDownloader
+          --icon assets/icon.ico --add-data "ui;ui"
+          --collect-all webview --collect-all pythonnet --collect-all clr_loader
+          app.py
 
       - name: Add tools and notices to the app folder
         shell: pwsh
@@ -48,6 +52,7 @@ jobs:
           New-Item -ItemType Directory -Force "$app\bin" | Out-Null
           Copy-Item build\bin\* "$app\bin\" -Recurse
           Copy-Item THIRD_PARTY_NOTICES.txt $app
+          Copy-Item assets\icon.ico $app
 
       - name: Self-test portable build (PATH without Python/FFmpeg)
         shell: pwsh
@@ -83,9 +88,9 @@ jobs:
           $dir = Join-Path $env:RUNNER_TEMP "ytpd"
           $p = Start-Process dist-installer\Setup.exe -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/TASKS=desktopicon", "/DIR=$dir" -Wait -PassThru
           if ($p.ExitCode -ne 0) { throw "installer exit code $($p.ExitCode)" }
-          foreach ($f in "YTPlaylistDownloader.exe", "bin\yt-dlp.exe", "bin\ffmpeg.exe", "bin\ffprobe.exe", "bin\deno.exe", "docs\index.html", "_internal\docs\index.html") {
+          foreach ($f in "YTPlaylistDownloader.exe", "bin\yt-dlp.exe", "bin\ffmpeg.exe", "bin\ffprobe.exe", "bin\deno.exe", "_internal\ui\index.html") {
             $path = Join-Path $dir $f
-            if (Test-Path $path) { "OK   $f" } elseif ($f -eq "docs\index.html") { "skip $f" } else { throw "missing: $f" }
+            if (Test-Path $path) { "OK   $f" } else { throw "missing: $f" }
           }
           $lnk = Join-Path $env:APPDATA "Microsoft\Windows\Start Menu\Programs\YouTube Playlist Downloader.lnk"
           if (-not (Test-Path $lnk)) { throw "Start Menu shortcut missing" }
@@ -103,14 +108,43 @@ jobs:
           if (Test-Path (Join-Path $dir "YTPlaylistDownloader.exe")) { throw "uninstall left files behind" }
           "OK   uninstall"
 
+      - name: Build portable ZIP and self-test it
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $root = "dist-portable\YTPlaylistDownloader"
+          New-Item -ItemType Directory -Force dist-portable | Out-Null
+          Copy-Item dist\YTPlaylistDownloader $root -Recurse
+          Set-Content "$root\portable.txt" "Portable mode: settings and history are stored in the data folder next to the exe." -Encoding UTF8
+          $env:PATH = "$env:SystemRoot\System32;$env:SystemRoot"
+          $out = "$PWD\selftest-portable2.txt"
+          $p = Start-Process "$root\YTPlaylistDownloader.exe" -ArgumentList "--selftest", $out -Wait -PassThru
+          if (Test-Path $out) {
+            Get-Content $out -Encoding UTF8
+            Get-Content $out -Encoding UTF8 | Where-Object { $_ -match "^FAIL" } | ForEach-Object { Write-Host "::error::$_" }
+          } else { Write-Host "::error::portable exe produced no result file" }
+          if ($p.ExitCode -ne 0) { throw "portable self-test failed" }
+          if (-not (Test-Path "$root\data")) { throw "portable mode did not create the data folder next to the exe" }
+          "OK   portable data folder"
+          Remove-Item "$root\data" -Recurse -Force
+          Compress-Archive -Path $root -DestinationPath dist-portable\YTPlaylistDownloader-Portable.zip -CompressionLevel Optimal
+          Get-Item dist-portable\YTPlaylistDownloader-Portable.zip | Format-Table Name, Length
+
       - uses: actions/upload-artifact@v4
         with:
           name: Setup
           path: dist-installer/Setup.exe
 
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Portable
+          path: dist-portable/YTPlaylistDownloader-Portable.zip
+
       - name: Publish release
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: dist-installer/Setup.exe
+          files: |
+            dist-installer/Setup.exe
+            dist-portable/YTPlaylistDownloader-Portable.zip
           generate_release_notes: true

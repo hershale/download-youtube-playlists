@@ -9,3 +9,4 @@ Python runtime  - PSF License (via PyInstaller)     https://www.python.org/
 
 הכלים האלה אינם חלק מהקוד של הפרויקט, והם מופעלים כתהליכים נפרדים.
 The tools above are separate programs launched as separate processes.
+pywebview (BSD-3-Clause) - https://github.com/r0x0r/pywebview

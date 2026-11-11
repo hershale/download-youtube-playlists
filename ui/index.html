@@ -1,0 +1,457 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>מוריד פלייליסטים</title>
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<style>
+@property --ang { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
+:root { --font: "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, Arial, sans-serif; --ease: cubic-bezier(.2,.8,.2,1); --spring: cubic-bezier(.34,1.56,.64,1); }
+[data-theme=dark]  { color-scheme: dark;  --bg:#0a0c13; --surface:rgba(255,255,255,.055); --surface2:rgba(255,255,255,.095); --line:rgba(255,255,255,.1); --text:#eef0f9; --muted:#97a0b8; --shadow:0 24px 70px rgba(0,0,0,.5); --glass:rgba(16,18,30,.62); }
+[data-theme=light] { color-scheme: light; --bg:#f2f3fb; --surface:rgba(255,255,255,.72); --surface2:#fff; --line:rgba(25,28,60,.1); --text:#161a33; --muted:#657089; --shadow:0 24px 60px rgba(50,50,120,.14); --glass:rgba(255,255,255,.7); }
+[data-accent=violet] { --a1:#7c5cff; --a2:#d355ff; } [data-accent=blue] { --a1:#3b82f6; --a2:#22d3ee; }
+[data-accent=teal] { --a1:#10b981; --a2:#06b6d4; } [data-accent=rose] { --a1:#f43f5e; --a2:#fb923c; } [data-accent=amber] { --a1:#f59e0b; --a2:#ef4444; }
+body { --grad: linear-gradient(135deg, var(--a1), var(--a2)); }
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; margin: 0; }
+body { font-family: var(--font); background: var(--bg); color: var(--text); overflow: hidden; font-size: 14.5px; line-height: 1.5; }
+button { font: inherit; color: inherit; cursor: pointer; border: 0; background: none; }
+input, select { font: inherit; color: inherit; }
+::selection { background: color-mix(in srgb, var(--a1) 45%, transparent); }
+::-webkit-scrollbar { width: 10px; } ::-webkit-scrollbar-thumb { background: var(--line); border-radius: 10px; border: 3px solid transparent; background-clip: content-box; } ::-webkit-scrollbar-thumb:hover { background: var(--muted); background-clip: content-box; border: 3px solid transparent; }
+
+/* רקע */
+.bg { position: fixed; inset: 0; overflow: hidden; z-index: 0; }
+.orb { position: absolute; border-radius: 50%; filter: blur(80px); opacity: .5; animation: drift 22s ease-in-out infinite alternate; }
+.o1 { width: 520px; height: 520px; background: var(--a1); top: -160px; right: -120px; }
+.o2 { width: 460px; height: 460px; background: var(--a2); bottom: -180px; left: -100px; animation-duration: 28s; opacity: .4; }
+.o3 { width: 300px; height: 300px; background: #22d3ee; top: 45%; left: 38%; opacity: .16; animation-duration: 34s; }
+[data-theme=light] .orb { opacity: .28; }
+@keyframes drift { to { transform: translate(-60px, 50px) scale(1.18); } }
+
+.app { position: relative; z-index: 1; display: flex; height: 100%; }
+.rail { width: 84px; flex: none; display: flex; flex-direction: column; align-items: center; padding: 18px 0; gap: 6px; background: var(--glass); backdrop-filter: blur(24px); border-inline-end: 1px solid var(--line); }
+.logo { width: 46px; height: 46px; margin-bottom: 14px; filter: drop-shadow(0 8px 18px color-mix(in srgb, var(--a1) 55%, transparent)); transition: transform .5s var(--spring); } .logo:hover { transform: rotate(-8deg) scale(1.08); }
+.nav { position: relative; width: 56px; height: 56px; border-radius: 18px; display: grid; place-items: center; color: var(--muted); transition: color .25s, background .25s, transform .25s var(--spring); }
+.nav svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; position: relative; z-index: 1; }
+.nav:hover { color: var(--text); transform: translateY(-2px); background: var(--surface); }
+.nav.active { color: #fff; } .nav .pill { position: absolute; inset: 0; border-radius: 18px; background: var(--grad); opacity: 0; transform: scale(.6); transition: .35s var(--spring); box-shadow: 0 10px 26px color-mix(in srgb, var(--a1) 50%, transparent); }
+.nav.active .pill { opacity: 1; transform: scale(1); }
+.nav .badge { position: absolute; top: 6px; inset-inline-end: 6px; min-width: 16px; height: 16px; border-radius: 9px; background: #fff; color: var(--a1); font-size: 10px; font-weight: 700; display: none; place-items: center; z-index: 2; padding: 0 4px; animation: pop .5s var(--spring); }
+.nav .tip { position: absolute; inset-inline-start: 66px; background: var(--surface2); border: 1px solid var(--line); padding: 4px 10px; border-radius: 8px; white-space: nowrap; font-size: 12px; opacity: 0; pointer-events: none; transform: translateX(6px); transition: .2s; z-index: 5; box-shadow: var(--shadow); }
+.nav:hover .tip { opacity: 1; transform: none; }
+.spacer { flex: 1; }
+main { flex: 1; min-width: 0; overflow-y: auto; padding: 30px 38px 40px; scroll-behavior: smooth; }
+.wrap { max-width: 880px; margin: 0 auto; }
+.page { display: none; } .page.active { display: block; animation: pageIn .55s var(--ease); }
+@keyframes pageIn { from { opacity: 0; transform: translateY(16px) scale(.992); } }
+@keyframes rise { from { opacity: 0; transform: translateY(18px); } }
+@keyframes pop { from { transform: scale(0); } }
+.rv > * { animation: rise .6s var(--ease) both; animation-delay: calc(var(--i, 0) * 70ms); }
+
+h1 { font-size: 32px; margin: 0 0 6px; letter-spacing: -.5px; line-height: 1.2; }
+h1 .g, .g { background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; background-size: 200% 100%; animation: sheen 6s linear infinite; }
+@keyframes sheen { to { background-position: -200% 0; } }
+h2 { font-size: 19px; margin: 0 0 14px; } .sub { color: var(--muted); margin: 0 0 24px; font-size: 15.5px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 22px; padding: 22px; backdrop-filter: blur(18px); box-shadow: var(--shadow); margin-bottom: 18px; transition: transform .3s var(--ease), border-color .3s; }
+.card.hov:hover { transform: translateY(-3px); border-color: color-mix(in srgb, var(--a1) 45%, var(--line)); }
+.lbl { font-size: 12.5px; font-weight: 600; color: var(--muted); margin: 0 0 9px; letter-spacing: .2px; }
+
+/* שדה הקישור */
+.search { position: relative; display: flex; gap: 10px; align-items: center; padding: 8px; border-radius: 22px; background: var(--surface2); border: 1px solid var(--line); box-shadow: var(--shadow); }
+.search::before { content: ""; position: absolute; inset: -2px; border-radius: 24px; padding: 2px; background: conic-gradient(from var(--ang), var(--a1), var(--a2), #22d3ee, var(--a1)); -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; opacity: 0; transition: opacity .3s; animation: spin 4s linear infinite; pointer-events: none; }
+.search:focus-within::before { opacity: 1; } @keyframes spin { to { --ang: 360deg; } }
+.search input { flex: 1; min-width: 0; background: none; border: 0; outline: 0; font-size: 16px; padding: 12px 14px; direction: ltr; text-align: left; }
+.search input::placeholder { color: var(--muted); }
+.btn { position: relative; overflow: hidden; display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 20px; border-radius: 14px; font-weight: 600; transition: transform .25s var(--spring), box-shadow .25s, background .25s, opacity .25s; user-select: none; }
+.btn:active { transform: scale(.96); } .btn:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+.btn.pri { background: var(--grad); color: #fff; box-shadow: 0 10px 28px color-mix(in srgb, var(--a1) 42%, transparent); } .btn.pri:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 14px 34px color-mix(in srgb, var(--a1) 55%, transparent); }
+.btn.gh { background: var(--surface); border: 1px solid var(--line); } .btn.gh:hover:not(:disabled) { background: var(--surface2); transform: translateY(-2px); }
+.btn.sm { padding: 8px 14px; border-radius: 11px; font-size: 13px; } .btn.danger:hover { color: #ff6b81; }
+.btn svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.ripple { position: absolute; border-radius: 50%; background: rgba(255,255,255,.4); transform: scale(0); animation: rip .6s ease-out; pointer-events: none; } @keyframes rip { to { transform: scale(4); opacity: 0; } }
+.cta { width: 100%; padding: 16px; font-size: 17px; border-radius: 18px; }
+
+/* צעדים */
+.steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 26px; }
+.step { padding: 18px; border-radius: 20px; background: var(--surface); border: 1px solid var(--line); transition: transform .35s var(--ease); } .step:hover { transform: translateY(-4px); }
+.step b { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 11px; background: var(--grad); color: #fff; margin-bottom: 10px; }
+.step span { color: var(--muted); font-size: 13.5px; display: block; }
+.float { animation: bob 5s ease-in-out infinite; } @keyframes bob { 50% { transform: translateY(-7px); } }
+
+/* תצוגה מקדימה */
+.info { display: none; margin-top: 18px; } .info.show { display: block; animation: rise .55s var(--ease); }
+.nav .tip { color: var(--text); } .meta span[dir=ltr] { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .job .body { min-width: 0; }
+.head { display: flex; gap: 18px; align-items: center; }
+.thumb { width: 150px; aspect-ratio: 16/9; border-radius: 14px; background: var(--surface2) center/cover; flex: none; overflow: hidden; position: relative; box-shadow: 0 10px 30px rgba(0,0,0,.3); }
+.thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.head h2 { margin: 0 0 4px; font-size: 20px; } .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.chip { padding: 4px 11px; border-radius: 99px; background: var(--surface2); border: 1px solid var(--line); font-size: 12.5px; color: var(--muted); }
+.skel { background: linear-gradient(90deg, var(--surface) 25%, var(--surface2) 50%, var(--surface) 75%); background-size: 300% 100%; animation: shim 1.3s linear infinite; border-radius: 12px; } @keyframes shim { to { background-position: -300% 0; } }
+.list { margin-top: 16px; max-height: 250px; overflow-y: auto; border-radius: 14px; border: 1px solid var(--line); background: color-mix(in srgb, var(--bg) 40%, transparent); }
+.listbar { display: flex; justify-content: space-between; align-items: center; margin-top: 16px; font-size: 13px; color: var(--muted); }
+.row { display: flex; align-items: center; gap: 12px; padding: 9px 14px; border-bottom: 1px solid var(--line); cursor: pointer; transition: background .2s; } .row:last-child { border: 0; } .row:hover { background: var(--surface); }
+.row .n { width: 26px; color: var(--muted); font-size: 12px; text-align: center; font-variant-numeric: tabular-nums; } .row .t { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .row .d { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+.row.off .t, .row.off .d { opacity: .4; text-decoration: line-through; }
+.ck { width: 20px; height: 20px; border-radius: 7px; border: 2px solid var(--muted); display: grid; place-items: center; flex: none; transition: .25s var(--spring); }
+.ck svg { width: 12px; height: 12px; stroke: #fff; stroke-width: 3.5; fill: none; stroke-dasharray: 20; stroke-dashoffset: 20; transition: stroke-dashoffset .3s .05s; }
+.row:not(.off) .ck { background: var(--grad); border-color: transparent; transform: scale(1.06); } .row:not(.off) .ck svg { stroke-dashoffset: 0; }
+
+/* בקרות */
+.seg { position: relative; display: flex; padding: 5px; border-radius: 16px; background: var(--surface); border: 1px solid var(--line); gap: 2px; }
+.seg button { position: relative; z-index: 1; flex: 1; padding: 10px 12px; border-radius: 12px; color: var(--muted); font-weight: 600; transition: color .3s; white-space: nowrap; } .seg button.on { color: #fff; }
+.seg .thumbbar { position: absolute; top: 5px; bottom: 5px; left: 0; border-radius: 12px; background: var(--grad); transition: transform .45s var(--spring), width .45s var(--spring); box-shadow: 0 8px 20px color-mix(in srgb, var(--a1) 40%, transparent); }
+.chipsq { display: flex; flex-wrap: wrap; gap: 9px; }
+.q { padding: 9px 16px; border-radius: 13px; background: var(--surface); border: 1px solid var(--line); font-weight: 600; color: var(--muted); transition: .3s var(--spring); } .q:hover { transform: translateY(-2px); color: var(--text); }
+.q.on { background: var(--grad); color: #fff; border-color: transparent; transform: scale(1.05); box-shadow: 0 8px 22px color-mix(in srgb, var(--a1) 40%, transparent); }
+.sum { margin: 16px 0; color: var(--muted); font-size: 13.5px; text-align: center; }
+.opt-grid { display: grid; gap: 20px; }
+
+/* משימות */
+.job { display: flex; gap: 16px; align-items: center; padding: 16px; border-radius: 20px; background: var(--surface); border: 1px solid var(--line); margin-bottom: 12px; animation: rise .5s var(--ease); position: relative; overflow: hidden; }
+.job .thumb { width: 104px; box-shadow: none; } .job .body { flex: 1; min-width: 0; } .job .tt { font-weight: 650; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 15.5px; } .job .st { color: var(--muted); font-size: 13px; margin: 2px 0 9px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bar { height: 9px; border-radius: 9px; background: var(--surface2); overflow: hidden; } .bar i { display: block; height: 100%; width: 0; border-radius: 9px; background: var(--grad); transition: width .6s var(--ease); position: relative; overflow: hidden; }
+.job.running .bar i::after, .job.zipping .bar i::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(255,255,255,.5), transparent); animation: slide 1.4s linear infinite; } @keyframes slide { from { transform: translateX(120%); } to { transform: translateX(-120%); } }
+.job.queued .bar i { background: var(--muted); opacity: .5; }
+.meta { display: flex; gap: 14px; margin-top: 7px; color: var(--muted); font-size: 12.5px; font-variant-numeric: tabular-nums; } .meta b { color: var(--text); }
+.job .acts { display: flex; flex-direction: column; gap: 8px; }
+.job.done { border-color: color-mix(in srgb, #22c55e 40%, var(--line)); } .job.error { border-color: color-mix(in srgb, #ef4444 45%, var(--line)); } .job.cancelled { opacity: .6; }
+.job.done .bar i { background: linear-gradient(90deg, #22c55e, #4ade80); } .job.error .bar i { background: #ef4444; }
+.okmark { position: absolute; inset-inline-start: 8px; top: 8px; width: 24px; height: 24px; display: none; filter: drop-shadow(0 2px 6px rgba(0,0,0,.4)); } .job.done .okmark { display: block; }
+.okmark circle { fill: #22c55e; } .okmark path { stroke: #fff; stroke-width: 3; fill: none; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 24; stroke-dashoffset: 24; animation: draw .5s .2s forwards; } @keyframes draw { to { stroke-dashoffset: 0; } }
+.empty { text-align: center; padding: 46px 20px; color: var(--muted); } .empty svg { width: 86px; height: 86px; margin-bottom: 8px; opacity: .85; }
+.hist { display: flex; gap: 14px; align-items: center; padding: 14px; border-radius: 18px; background: var(--surface); border: 1px solid var(--line); margin-bottom: 10px; transition: .3s var(--ease); animation: rise .5s var(--ease) both; animation-delay: calc(var(--i, 0) * 45ms); } .hist:hover { transform: translateX(-4px); border-color: color-mix(in srgb, var(--a1) 40%, var(--line)); }
+.hist .thumb { width: 92px; box-shadow: none; } .hist .body { flex: 1; min-width: 0; } .hist .tt { font-weight: 650; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .hist .st { color: var(--muted); font-size: 12.5px; } .hist.gone { opacity: .55; }
+.tag { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 7px; background: color-mix(in srgb, var(--a1) 22%, transparent); color: var(--a1); margin-inline-start: 8px; }
+
+/* הגדרות */
+.sgroup { margin-bottom: 18px; } .sgroup > h3 { margin: 0 0 10px 6px; font-size: 13px; letter-spacing: .6px; color: var(--muted); font-weight: 700; }
+.srow { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 15px 4px; border-bottom: 1px solid var(--line); } .srow:last-child { border: 0; }
+.srow .tx b { display: block; font-weight: 600; } .srow .tx span { color: var(--muted); font-size: 12.8px; display: block; max-width: 440px; margin-top: 1px; }
+.ctl { flex: none; display: flex; align-items: center; gap: 10px; }
+.sw { position: relative; width: 48px; height: 28px; border-radius: 99px; background: var(--surface2); border: 1px solid var(--line); transition: background .3s; flex: none; } .sw::after { content: ""; position: absolute; top: 3px; inset-inline-start: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; transition: transform .4s var(--spring); box-shadow: 0 2px 6px rgba(0,0,0,.3); }
+.sw.on { background: var(--grad); border-color: transparent; } .sw.on::after { transform: translateX(-20px); }
+select, .num { background: var(--surface2); border: 1px solid var(--line); border-radius: 12px; padding: 9px 12px; outline: 0; min-width: 150px; } select:focus, .num:focus, .pathin:focus { border-color: var(--a1); }
+.pathin { width: 300px; background: var(--surface2); border: 1px solid var(--line); border-radius: 12px; padding: 9px 12px; direction: ltr; text-align: left; outline: 0; font-size: 13px; }
+input[type=range] { accent-color: var(--a1); width: 180px; } .rv-val { min-width: 92px; text-align: end; color: var(--muted); font-variant-numeric: tabular-nums; font-size: 13px; }
+.swatches { display: flex; gap: 10px; } .swatch { width: 30px; height: 30px; border-radius: 50%; border: 3px solid transparent; transition: .3s var(--spring); outline: 2px solid transparent; } .swatch:hover { transform: scale(1.18); } .swatch.on { outline-color: var(--text); transform: scale(1.12); }
+
+/* אודות */
+.about { text-align: center; padding: 20px 0 10px; } .about svg.big { width: 128px; height: 128px; filter: drop-shadow(0 20px 40px color-mix(in srgb, var(--a1) 50%, transparent)); animation: bob 5s ease-in-out infinite; }
+.about svg .pull { animation: zip 3.2s ease-in-out infinite; transform-box: fill-box; } .about svg .tl, .about svg .tr { animation: teeth 3.2s ease-in-out infinite; } @keyframes zip { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-36px); } } @keyframes teeth { 0%,100% { opacity: 1; } 50% { opacity: .25; } }
+.kv { display: grid; grid-template-columns: auto 1fr; gap: 8px 22px; text-align: start; max-width: 560px; margin: 22px auto; } .kv dt { color: var(--muted); } .kv dd { margin: 0; direction: ltr; text-align: left; overflow-wrap: anywhere; font-size: 13px; }
+
+.warn { display: none; padding: 12px 16px; border-radius: 14px; background: color-mix(in srgb, #f59e0b 16%, transparent); border: 1px solid color-mix(in srgb, #f59e0b 40%, transparent); margin-bottom: 16px; } .warn.show { display: block; animation: rise .4s; }
+.errbox { padding: 14px 16px; border-radius: 14px; background: color-mix(in srgb, #ef4444 14%, transparent); border: 1px solid color-mix(in srgb, #ef4444 40%, transparent); color: #ff8b9a; margin-top: 14px; animation: rise .4s; }
+.toasts { position: fixed; bottom: 22px; inset-inline-start: 50%; transform: translateX(50%); display: flex; flex-direction: column; gap: 10px; z-index: 50; align-items: center; pointer-events: none; }
+.toast { background: var(--surface2); border: 1px solid var(--line); backdrop-filter: blur(20px); padding: 11px 20px; border-radius: 14px; box-shadow: var(--shadow); animation: tin .5s var(--spring); } .toast.out { opacity: 0; transform: translateY(10px); transition: .4s; } @keyframes tin { from { opacity: 0; transform: translateY(24px) scale(.9); } }
+.toast.ok { border-color: color-mix(in srgb, #22c55e 55%, var(--line)); } .toast.bad { border-color: color-mix(in srgb, #ef4444 55%, var(--line)); }
+canvas#fx { position: fixed; inset: 0; pointer-events: none; z-index: 60; }
+body.noanim *, body.noanim *::before, body.noanim *::after { animation: none !important; transition-duration: .01s !important; }
+@media (max-width: 860px) { main { padding: 22px 18px; } .steps { grid-template-columns: 1fr; } .head .thumb { width: 110px; } .pathin { width: 200px; } }
+</style>
+</head>
+<body data-theme="dark" data-accent="violet">
+<div class="bg"><i class="orb o1"></i><i class="orb o2"></i><i class="orb o3"></i></div>
+<div class="app">
+  <aside class="rail">
+    <svg class="logo" viewBox="0 0 256 256" aria-hidden="true"><use href="#ic"/></svg>
+    <button class="nav active" data-page="download"><i class="pill"></i><svg viewBox="0 0 24 24"><path d="M12 3v12m0 0l-4.5-4.5M12 15l4.5-4.5M4 17v1.5A2.5 2.5 0 006.5 21h11a2.5 2.5 0 002.5-2.5V17"/></svg><span class="tip">הורדה</span></button>
+    <button class="nav" data-page="history"><i class="pill"></i><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7.5V12l3 2"/></svg><span class="badge" id="hbadge">0</span><span class="tip">היסטוריה</span></button>
+    <button class="nav" data-page="settings"><i class="pill"></i><svg viewBox="0 0 24 24"><path d="M4 7h9M17 7h3M4 12h3M11 12h9M4 17h11M19 17h1"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="17" r="2"/></svg><span class="tip">הגדרות</span></button>
+    <div class="spacer"></div>
+    <button class="nav" data-page="about"><i class="pill"></i><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg><span class="tip">אודות</span></button>
+  </aside>
+  <main id="main"><div class="wrap">
+
+    <section class="page active" id="p-download">
+      <div class="rv">
+        <div style="--i:0"><h1>הורדת <span class="g">פלייליסטים</span> בקליק</h1><p class="sub">הדביקו קישור לפלייליסט או לסרטון מיוטיוב. הכול נארז לקובץ ZIP אחד.</p></div>
+        <div class="warn" id="warn" style="--i:1"></div>
+        <div style="--i:1"><div class="search"><input id="url" type="text" placeholder="https://www.youtube.com/playlist?list=…" spellcheck="false" autocomplete="off">
+          <button class="btn gh sm" id="paste" title="הדבקה מהלוח"><svg viewBox="0 0 24 24"><rect x="8" y="3" width="8" height="4" rx="1"/><path d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2V7a2 2 0 00-2-2h-2"/></svg>הדבקה</button>
+          <button class="btn pri" id="check">בדיקה</button></div></div>
+      </div>
+      <div id="err"></div>
+      <div class="steps" id="steps">
+        <div class="step float" style="animation-delay:0s"><b>1</b>הדביקו קישור<span>פלייליסט, סרטון או רשימת השמעה של YouTube Music.</span></div>
+        <div class="step float" style="animation-delay:.6s"><b>2</b>בחרו סוג ואיכות<span>וידאו + אודיו, וידאו בלבד, או אודיו בלבד בכל איכות.</span></div>
+        <div class="step float" style="animation-delay:1.2s"><b>3</b>קבלו קובץ ZIP<span>נשמר אוטומטית בתיקיית ההורדות שלכם.</span></div>
+      </div>
+      <div class="info" id="info">
+        <div class="card"><div class="head"><div class="thumb" id="ithumb"></div><div style="min-width:0;flex:1"><h2 id="ititle"></h2><div class="sub" style="margin:0" id="iup"></div><div class="chips" id="ichips"></div></div></div>
+          <div id="listwrap"><div class="listbar"><span id="selc"></span><span><button class="btn gh sm" id="selall">בחירת הכול</button> <button class="btn gh sm" id="selnone">ניקוי</button></span></div><div class="list" id="list"></div></div></div>
+        <div class="card"><div class="opt-grid">
+          <div><div class="lbl">מה להוריד?</div><div class="seg" id="mode"><i class="thumbbar"></i><button data-v="both">וידאו + אודיו</button><button data-v="video">וידאו בלבד</button><button data-v="audio">אודיו בלבד</button></div></div>
+          <div><div class="lbl" id="qlbl">איכות</div><div class="chipsq" id="quality"></div></div></div>
+          <div class="sum" id="sum"></div>
+          <button class="btn pri cta" id="go">הוספה לתור ההורדות</button></div>
+      </div>
+      <div id="queue-h" style="display:none"><h2 style="margin-top:28px">תור ההורדות</h2></div>
+      <div id="jobs"></div>
+    </section>
+
+    <section class="page" id="p-history">
+      <div class="rv"><div style="--i:0"><h1>היסטוריית <span class="g">הורדות</span></h1><p class="sub">ההורדות האחרונות שלכם, זמינות לפתיחה בלחיצה.</p></div></div>
+      <div id="hlist"></div>
+      <div style="text-align:center;margin-top:18px"><button class="btn gh sm danger" id="hclear" style="display:none">ניקוי ההיסטוריה</button></div>
+    </section>
+
+    <section class="page" id="p-settings">
+      <div class="rv"><div style="--i:0"><h1><span class="g">הגדרות</span></h1><p class="sub">כל שינוי נשמר אוטומטית.</p></div></div>
+      <div id="sbody"></div>
+      <div style="text-align:center"><button class="btn gh sm danger" id="sreset">איפוס לברירת מחדל</button></div>
+    </section>
+
+    <section class="page" id="p-about">
+      <div class="about">
+        <svg class="big" viewBox="0 0 256 256" id="bigicon"></svg>
+        <h1 style="margin-top:18px">מוריד <span class="g">פלייליסטים</span></h1>
+        <p class="sub" style="margin-bottom:0">רוכסן אחד, פלייליסט שלם.</p>
+        <dl class="kv" id="kv"></dl>
+        <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+          <button class="btn gh" id="openout">פתיחת תיקיית ההורדות</button>
+          <button class="btn gh" data-ext="https://github.com/hershale/download-youtube-playlists">GitHub</button>
+          <button class="btn gh danger" id="quit" style="display:none">יציאה מהתוכנה</button>
+        </div>
+        <p class="sub" style="font-size:12.5px;margin:26px auto 0;max-width:560px">יש להוריד רק תכנים שיש לכם זכות להוריד. השימוש באחריותכם ובהתאם לתנאי השימוש של יוטיוב ולדיני זכויות היוצרים.</p>
+      </div>
+    </section>
+  </div></main>
+</div>
+<div class="toasts" id="toasts"></div>
+<canvas id="fx"></canvas>
+<svg width="0" height="0" style="position:absolute"><defs>
+  <linearGradient id="ic-bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4f46e5"/><stop offset=".5" stop-color="#8b5cf6"/><stop offset="1" stop-color="#ec4899"/></linearGradient>
+  <linearGradient id="ic-sheet" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#e2dcfc"/></linearGradient>
+  <linearGradient id="ic-pull" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f43f9a"/><stop offset="1" stop-color="#8b5cf6"/></linearGradient>
+  <g id="ic"><rect x="8" y="8" width="240" height="240" rx="56" fill="url(#ic-bg)"/><rect x="68" y="34" width="120" height="196" rx="22" fill="url(#ic-sheet)"/>
+    <g fill="#312e81" id="teeth"></g>
+    <g class="pull"><rect x="108" y="150" width="40" height="34" rx="11" fill="#1e1b4b"/><rect x="120" y="160" width="16" height="6" rx="3" fill="#fff" opacity=".28"/><rect x="122" y="180" width="12" height="14" rx="4" fill="#1e1b4b"/><path d="M114 195.5 L114 227 L146 211.2 Z" fill="url(#ic-pull)" stroke="url(#ic-pull)" stroke-width="5" stroke-linejoin="round"/></g></g>
+</defs></svg>
+
+<script>
+"use strict";
+const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const MODE_L = { both: "וידאו + אודיו", video: "וידאו בלבד", audio: "אודיו בלבד" };
+const VQ = [["best", "הגבוהה ביותר"], ["2160", "4K"], ["1440", "2K"], ["1080", "1080p"], ["720", "720p"], ["480", "480p"], ["360", "360p"]];
+const AQ = [["best", "הטובה ביותר"], ["320", "320 kbps"], ["192", "192 kbps"], ["128", "128 kbps"]];
+const ltr = s => "⁦" + s + "⁩";  // מבודד רצפים לועזיים/מספריים בתוך טקסט עברי
+const qLabel = (m, q) => { const l = (m === "audio" ? AQ : VQ).find(x => x[0] === q)?.[1] || q; return /[a-z0-9]/i.test(l) ? ltr(l) : l; };
+let S = {}, H = {}, info = null, url = "", sel = new Set(), mode = "both", quality = "1080", lastJobs = {}, noteShown = "";
+
+async function api(path, body) {
+  const opt = body === undefined ? {} : { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) };
+  let r; try { r = await fetch(path, opt); } catch { throw new Error("החיבור לשרת המקומי נותק. הפעילו את התוכנה מחדש."); }
+  let j = {}; try { j = await r.json(); } catch {}
+  if (!r.ok) throw new Error(j.error || "שגיאה"); return j;
+}
+function toast(msg, kind = "") { const t = document.createElement("div"); t.className = "toast " + kind; t.textContent = msg; $("#toasts").append(t); setTimeout(() => { t.classList.add("out"); setTimeout(() => t.remove(), 450); }, 2600); }
+const fmtDur = s => { if (s == null) return ""; s = Math.round(s); const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), x = s % 60; return (h ? h + ":" + String(m).padStart(2, "0") : m) + ":" + String(x).padStart(2, "0"); };
+const fmtSize = b => ltr(b > 1e9 ? (b / 1e9).toFixed(2) + " GB" : b > 1e6 ? (b / 1e6).toFixed(1) + " MB" : Math.max(1, Math.round(b / 1e3)) + " KB");
+const ago = t => { const d = Date.now() / 1000 - t; if (d < 60) return "ממש עכשיו"; if (d < 3600) return `לפני ${Math.floor(d / 60)} דקות`; if (d < 86400) return `לפני ${Math.floor(d / 3600)} שעות`; return `לפני ${Math.floor(d / 86400)} ימים`; };
+function ripple(e) { const b = e.target.closest(".btn"); if (!b || b.disabled) return; const r = b.getBoundingClientRect(), s = Math.max(r.width, r.height), el = document.createElement("span"); el.className = "ripple"; el.style.cssText = `width:${s}px;height:${s}px;left:${e.clientX - r.left - s / 2}px;top:${e.clientY - r.top - s / 2}px`; b.append(el); setTimeout(() => el.remove(), 650); }
+document.addEventListener("pointerdown", ripple);
+document.addEventListener("click", e => { const a = e.target.closest("[data-ext]"); if (a) { const u = a.dataset.ext; if (window.pywebview?.api?.open_external) window.pywebview.api.open_external(u); else window.open(u, "_blank", "noopener"); } });
+
+/* ---------- ערכת נושא והגדרות ---------- */
+const mq = matchMedia("(prefers-color-scheme: dark)");
+function applyTheme() { const t = S.theme === "system" || !S.theme ? (mq.matches ? "dark" : "light") : S.theme; document.body.dataset.theme = t; document.body.dataset.accent = S.accent || "violet"; document.body.classList.toggle("noanim", S.animations === false); }
+mq.addEventListener("change", applyTheme);
+let saveT = null;
+function setSetting(k, v, quiet) { const old = S[k]; S[k] = v; applyTheme(); clearTimeout(saveT); saveT = setTimeout(async () => { try { const r = await api("/api/settings", { [k]: v }); S = r.settings; if (!quiet) toast("נשמר ✓", "ok"); } catch (e) { S[k] = old; toast(e.message, "bad"); renderSettings(); applyTheme(); } }, 220); }
+
+/* ---------- ניווט ---------- */
+function go(page) {
+  $$(".nav").forEach(n => n.classList.toggle("active", n.dataset.page === page));
+  $$(".page").forEach(p => p.classList.toggle("active", p.id === "p-" + page));
+  $("#main").scrollTo({ top: 0 });
+  if (page === "history") loadHistory(); if (page === "settings") renderSettings(); if (page === "about") renderAbout();
+}
+$$(".nav").forEach(n => n.addEventListener("click", () => go(n.dataset.page)));
+
+/* ---------- בקרות בחירה (seg + chips) ---------- */
+function moveThumb(seg) { const on = $("button.on", seg), t = $(".thumbbar", seg); if (!on || !t) return; t.style.width = on.offsetWidth + "px"; t.style.transform = `translateX(${on.offsetLeft}px)`; }
+function setMode(m, silent) { mode = m; $$("#mode button").forEach(b => b.classList.toggle("on", b.dataset.v === m)); moveThumb($("#mode")); const list = m === "audio" ? AQ : VQ; if (!list.some(x => x[0] === quality)) quality = m === "audio" ? S.default_audio_quality || "best" : S.default_video_quality || "1080"; renderQuality(); }
+function renderQuality() { $("#qlbl").textContent = mode === "audio" ? "איכות אודיו" + (S.audio_format === "flac" ? " (FLAC ללא איבוד, האיכות לא משפיעה)" : "") : "איכות וידאו (עד הרזולוציה שנבחרה)"; $("#quality").innerHTML = (mode === "audio" ? AQ : VQ).map(([v, l]) => `<button class="q ${v === quality ? "on" : ""}" data-v="${v}">${l}</button>`).join(""); updateSummary(); }
+$("#mode").addEventListener("click", e => { const b = e.target.closest("button"); if (b) setMode(b.dataset.v); });
+$("#quality").addEventListener("click", e => { const b = e.target.closest(".q"); if (b) { quality = b.dataset.v; renderQuality(); } });
+function updateSummary() { if (!info) return; const n = sel.size; $("#sum").textContent = `${n} ${n === 1 ? "פריט" : "פריטים"} · ${MODE_L[mode]} · ${qLabel(mode, quality)} · ${S.save_as_zip === false ? "תיקייה" : ltr("ZIP")}`; $("#go").disabled = n === 0; $("#selc").textContent = `נבחרו ${n} מתוך ${info.count}`; }
+
+/* ---------- בדיקת קישור ---------- */
+const isYT = u => /^https?:\/\/((www|m|music)\.)?(youtube\.com|youtu\.be)\//i.test(u.trim());
+async function check() {
+  url = $("#url").value.trim(); $("#err").innerHTML = "";
+  if (!url) return; if (!isYT(url)) { $("#err").innerHTML = '<div class="errbox">הקישור חייב להיות מיוטיוב (youtube.com / youtu.be).</div>'; return; }
+  $("#check").disabled = true; $("#check").textContent = "בודק…"; $("#steps").style.display = "none"; $("#info").classList.remove("show");
+  $("#err").innerHTML = '<div class="card"><div class="head"><div class="thumb skel"></div><div style="flex:1"><div class="skel" style="height:24px;width:60%;margin-bottom:12px"></div><div class="skel" style="height:16px;width:35%"></div></div></div></div>';
+  try {
+    info = await api("/api/info", { url }); $("#err").innerHTML = "";
+    sel = new Set(info.items.map(i => i.i)); renderInfo(); $("#info").classList.add("show"); requestAnimationFrame(() => moveThumb($("#mode")));
+  } catch (e) { info = null; $("#steps").style.display = ""; $("#err").innerHTML = `<div class="errbox">${esc(e.message)}</div>`; }
+  $("#check").disabled = false; $("#check").textContent = "בדיקה";
+}
+function countUp(el, to, fmt) { if (S.animations === false) { el.textContent = fmt(to); return; } const t0 = performance.now(); (function f(t) { const k = Math.min(1, (t - t0) / 700); el.textContent = fmt(Math.round(to * (1 - Math.pow(1 - k, 3)))); if (k < 1) requestAnimationFrame(f); })(t0); }
+function renderInfo() {
+  $("#ithumb").innerHTML = info.thumb ? `<img src="${esc(info.thumb)}" alt="" onerror="this.remove()">` : "";
+  $("#ititle").textContent = info.title; $("#iup").textContent = info.uploader || "";
+  $("#ichips").innerHTML = `<span class="chip"><b id="cn">0</b> ${info.count === 1 ? "פריט" : "פריטים"}</span>` + (info.duration ? `<span class="chip" id="cd"></span>` : "") + (info.is_playlist ? '<span class="chip">פלייליסט</span>' : "");
+  countUp($("#cn"), info.count, String); if (info.duration) countUp($("#cd"), info.duration, v => "משך כולל " + fmtDur(v));
+  $("#listwrap").style.display = info.count > 1 ? "" : "none";
+  $("#list").innerHTML = info.items.map(i => `<div class="row" data-i="${i.i}"><span class="ck"><svg viewBox="0 0 12 12"><path d="M2 6.5l2.5 2.5L10 3.5"/></svg></span><span class="n">${i.i}</span><span class="t">${esc(i.title)}</span><span class="d">${fmtDur(i.dur)}</span></div>`).join("");
+  setMode(S.default_mode || "both"); updateSummary(); syncRows();
+}
+const syncRows = () => $$("#list .row").forEach(r => r.classList.toggle("off", !sel.has(+r.dataset.i)));
+$("#list").addEventListener("click", e => { const r = e.target.closest(".row"); if (!r) return; const i = +r.dataset.i; sel.has(i) ? sel.delete(i) : sel.add(i); syncRows(); updateSummary(); });
+$("#selall").onclick = () => { sel = new Set(info.items.map(i => i.i)); syncRows(); updateSummary(); };
+$("#selnone").onclick = () => { sel.clear(); syncRows(); updateSummary(); };
+$("#check").onclick = check;
+$("#url").addEventListener("keydown", e => { if (e.key === "Enter") check(); });
+$("#url").addEventListener("paste", () => setTimeout(() => isYT($("#url").value) && check(), 60));
+$("#paste").onclick = async () => { try { const t = await navigator.clipboard.readText(); if (t) { $("#url").value = t.trim(); check(); } } catch { $("#url").focus(); toast("הדביקו עם Ctrl+V"); } };
+const toItems = () => { if (!info || sel.size === info.count) return ""; const a = [...sel].sort((x, y) => x - y), out = []; for (let i = 0; i < a.length;) { let j = i; while (j + 1 < a.length && a[j + 1] === a[j] + 1) j++; out.push(j > i ? `${a[i]}-${a[j]}` : `${a[i]}`); i = j + 1; } return out.join(","); };
+$("#go").onclick = async () => {
+  if (!info || !sel.size) return;
+  try { await api("/api/jobs", { url, mode, quality, items: toItems(), title: info.title, thumb: info.thumb }); toast("נוסף לתור ההורדות", "ok"); pollNow(); setTimeout(() => $("#queue-h").scrollIntoView({ behavior: "smooth", block: "start" }), 250); }
+  catch (e) { toast(e.message, "bad"); }
+};
+
+/* ---------- תור הורדות ---------- */
+function jobNode(j) {
+  const el = document.createElement("div"); el.className = "job"; el.dataset.id = j.id;
+  el.innerHTML = `<div class="thumb"></div><div class="body"><div class="tt"></div><div class="st"></div><div class="bar"><i></i></div><div class="meta"></div></div><div class="acts"></div>
+  <svg class="okmark" viewBox="0 0 26 26"><circle cx="13" cy="13" r="13"/><path d="M7 13.5l4 4 8-9"/></svg>`;
+  el.querySelector(".acts").addEventListener("click", async e => { const b = e.target.closest("button"); if (!b) return; const id = el.dataset.id;
+    try { if (b.dataset.a === "cancel") await api(`/api/jobs/${id}/cancel`, {}); if (b.dataset.a === "dismiss") { el.remove(); await api(`/api/jobs/${id}/dismiss`, {}); } if (b.dataset.a === "reveal") { const r = await api("/api/reveal", { id }); if (!r.ok) toast("הקובץ לא נמצא", "bad"); } pollNow(); } catch (er) { toast(er.message, "bad"); } });
+  return el;
+}
+function updateJob(el, j) {
+  el.className = "job " + j.status;
+  const th = $(".thumb", el); if (j.thumb && !th.firstChild) th.innerHTML = `<img src="${esc(j.thumb)}" alt="" onerror="this.remove()">`;
+  $(".tt", el).textContent = j.title;
+  const pct = Math.round((j.progress || 0) * 100); $(".bar i", el).style.width = (j.status === "done" ? 100 : j.status === "queued" ? 3 : pct) + "%";
+  const meta = $(".meta", el), acts = $(".acts", el);
+  const L = { queued: ["ממתין בתור…", ""], running: [j.current ? "מוריד: " + ltr(j.current) : "מתחיל…", `<span><b>${pct}%</b></span><span>פריט <b>${j.index}</b> מתוך <b>${j.total}</b></span>` + (j.speed ? `<span dir="ltr"><b>${esc(j.speed)}</b></span>` : "") + (j.eta ? `<span>נותרו <b dir="ltr">${esc(j.eta)}</b></span>` : "")], zipping: ["אורז ושומר את הקבצים…", ""],
+    done: [`הושלם · ${j.files} קבצים · ${fmtSize(j.size || 0)}`, j.saved_path ? `<span dir="ltr">${esc(j.saved_path)}</span>` : ""], error: [j.error || "ההורדה נכשלה", ""], cancelled: ["בוטל", ""] };
+  $(".st", el).textContent = L[j.status][0]; meta.innerHTML = L[j.status][1];
+  const key = j.status; if (acts.dataset.k !== key) { acts.dataset.k = key;
+    acts.innerHTML = ["queued", "running", "zipping"].includes(key) ? `<button class="btn gh sm danger" data-a="cancel">ביטול</button>` : key === "done" ? `${j.saved_path ? '<button class="btn gh sm" data-a="reveal">הצגה בתיקייה</button>' : ""}<button class="btn gh sm" data-a="dismiss">הסרה</button>` : `<button class="btn gh sm" data-a="dismiss">הסרה</button>`; }
+}
+function renderJobs(list) {
+  const box = $("#jobs"); $("#queue-h").style.display = list.length ? "" : "none";
+  const ids = new Set(list.map(j => j.id)); $$(".job", box).forEach(n => !ids.has(n.dataset.id) && n.remove());
+  list.forEach((j, i) => { let n = $(`.job[data-id="${j.id}"]`, box); if (!n) { n = jobNode(j); box.append(n); } updateJob(n, j); if (box.children[i] !== n) box.insertBefore(n, box.children[i] || null);
+    const prev = lastJobs[j.id]; if (prev && prev !== "done" && j.status === "done") { toast(`הושלם: ${j.title}`, "ok"); burst(); updateBadge(1); } lastJobs[j.id] = j.status; });
+}
+let pollTimer = null;
+async function poll() {
+  let delay = 3000;
+  try { const r = await api("/api/jobs"); renderJobs(r.jobs); if (r.jobs.some(j => ["queued", "running", "zipping"].includes(j.status))) delay = 900;
+    $("#warn").classList.toggle("show", !!r.updating || !!H.warn); if (r.updating) $("#warn").textContent = "מעדכן את רכיב ההורדה (yt-dlp)… אפשר להמשיך להכין את ההורדה."; else if (H.warn) $("#warn").textContent = H.warn;
+    if (r.note && r.note !== noteShown) { noteShown = r.note; toast(r.note, "ok"); } } catch {}
+  pollTimer = setTimeout(poll, delay);
+}
+const pollNow = () => { clearTimeout(pollTimer); poll(); };
+function updateBadge(add) { const b = $("#hbadge"); const n = (+b.textContent || 0) + add; b.textContent = n; b.style.display = n > 0 ? "grid" : "none"; }
+
+/* ---------- היסטוריה ---------- */
+async function loadHistory() {
+  const b = $("#hbadge"); b.textContent = 0; b.style.display = "none";
+  try { const { items } = await api("/api/history"); const box = $("#hlist");
+    $("#hclear").style.display = items.length ? "" : "none";
+    if (!items.length) { box.innerHTML = `<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" class="float"><circle cx="12" cy="12" r="9"/><path d="M12 7.5V12l3 2"/></svg><div>עוד אין הורדות. הפלייליסט הראשון שלכם יופיע כאן.</div></div>`; return; }
+    box.innerHTML = items.map((h, i) => `<div class="hist ${h.exists ? "" : "gone"}" style="--i:${i}" data-id="${h.id}"><div class="thumb">${h.thumb ? `<img src="${esc(h.thumb)}" alt="" onerror="this.remove()">` : ""}</div><div class="body"><div class="tt">${esc(h.title)}<span class="tag">${h.kind === "zip" ? "ZIP" : "תיקייה"}</span></div><div class="st">${h.files} קבצים · ${fmtSize(h.size)} · ${MODE_L[h.mode] || ""} · ${qLabel(h.mode, h.quality)} · ${ago(h.time)}${h.exists ? "" : " · הועבר או נמחק"}</div></div><div class="acts" style="display:flex;gap:8px"><button class="btn gh sm" data-a="reveal" ${h.exists ? "" : "disabled"}>הצגה בתיקייה</button><button class="btn gh sm danger" data-a="rm">הסרה</button></div></div>`).join("");
+  } catch (e) { toast(e.message, "bad"); }
+}
+$("#hlist").addEventListener("click", async e => { const b = e.target.closest("button"); if (!b) return; const id = b.closest(".hist").dataset.id; if (b.dataset.a === "reveal") await api("/api/reveal", { id }); else { await api("/api/history/remove", { id }); loadHistory(); } });
+$("#hclear").onclick = async () => { await api("/api/history/clear", {}); loadHistory(); };
+
+/* ---------- הגדרות ---------- */
+const GROUPS = [
+  { t: "תצוגה", rows: [
+    { k: "theme", type: "seg", l: "ערכת נושא", d: "בהיר, כהה או לפי המערכת.", o: [["system", "לפי המערכת"], ["light", "בהיר"], ["dark", "כהה"]] },
+    { k: "accent", type: "swatch", l: "צבע הדגשה", d: "הצבע הראשי של התוכנה.", o: ["violet", "blue", "teal", "rose", "amber"] },
+    { k: "animations", type: "switch", l: "אנימציות", d: "כיבוי חוסך משאבים ומתאים למי שרגיש לתנועה." }] },
+  { t: "הורדה", rows: [
+    { k: "out_dir", type: "folder", l: "תיקיית שמירה", d: "המקום שבו נשמרים קבצי ה-ZIP." },
+    { k: "save_as_zip", type: "switch", l: "אריזה לקובץ ZIP", d: "כבוי: הקבצים יישמרו בתיקייה נפרדת בשם הפלייליסט." },
+    { k: "number_files", type: "switch", l: "מספור הקבצים", d: "מוסיף מספר סידורי לשם כל קובץ ושומר על סדר הפלייליסט." },
+    { k: "open_when_done", type: "switch", l: "פתיחת התיקייה בסיום", d: "פותח את הסייר כשההורדה מסתיימת." },
+    { k: "default_mode", type: "seg", l: "סוג ברירת מחדל", d: "", o: [["both", "וידאו + אודיו"], ["video", "וידאו בלבד"], ["audio", "אודיו בלבד"]] },
+    { k: "default_video_quality", type: "select", l: "איכות וידאו ברירת מחדל", d: "", o: VQ },
+    { k: "default_audio_quality", type: "select", l: "איכות אודיו ברירת מחדל", d: "", o: AQ }] },
+  { t: "מדיה", rows: [
+    { k: "video_container", type: "seg", l: "סוג קובץ וידאו", d: "MP4 מתאים לרוב המכשירים, MKV גמיש יותר.", o: [["mp4", "MP4"], ["mkv", "MKV"]] },
+    { k: "prefer_h264", type: "switch", l: "העדפת H.264 (MP4)", d: "תאימות מרבית בנגנים. לא פוגע ברזולוציה שנבחרה." },
+    { k: "audio_format", type: "select", l: "פורמט אודיו", d: "MP3 הנפוץ ביותר. FLAC ללא איבוד איכות (קבצים גדולים).", o: [["mp3", "MP3"], ["m4a", "M4A (AAC)"], ["opus", "Opus"], ["flac", "FLAC"]] },
+    { k: "embed_meta", type: "switch", l: "הטמעת מידע ותמונת עטיפה", d: "שם השיר, האמן ותמונה בתוך הקובץ (אודיו)." }] },
+  { t: "רשת ומתקדם", rows: [
+    { k: "speed_limit_kb", type: "range", l: "הגבלת מהירות", d: "שימושי כדי לא לחנוק את האינטרנט בבית.", min: 0, max: 20000, step: 250, fmt: v => v ? (v >= 1000 ? (v / 1000) + " MB/s" : v + " KB/s") : "ללא הגבלה" },
+    { k: "fragments", type: "range", l: "הורדה מקבילה של קטעים", d: "ערך גבוה מאיץ הורדה, אך עלול לגרום לחסימה זמנית.", min: 1, max: 16, step: 1, fmt: v => v },
+    { k: "cookies_browser", type: "select", l: "שימוש בעוגיות מהדפדפן", d: "לפלייליסטים פרטיים, תכנים מוגבלי גיל, או כשיוטיוב מבקש לאמת שאינכם רובוט. צריך להיות מחוברים ליוטיוב באותו דפדפן (Firefox הכי יציב).", o: [["", "ללא"], ["firefox", "Firefox"], ["edge", "Edge"], ["chrome", "Chrome"], ["brave", "Brave"]] }] },
+  { t: "עדכונים", rows: [
+    { k: "auto_update", type: "switch", l: "עדכון אוטומטי של רכיב ההורדה", d: "יוטיוב משתנה לעיתים קרובות. העדכון רץ ברקע בפתיחת התוכנה." },
+    { k: "_update", type: "update", l: "רכיב ההורדה (yt-dlp)", d: "" }] },
+];
+function ctl(r) {
+  const v = S[r.k];
+  if (r.type === "switch") return `<button class="sw ${v ? "on" : ""}" data-k="${r.k}" role="switch" aria-checked="${!!v}"></button>`;
+  if (r.type === "seg") return `<div class="seg" data-k="${r.k}"><i class="thumbbar"></i>${r.o.map(([a, b]) => `<button data-v="${a}" class="${a === v ? "on" : ""}">${b}</button>`).join("")}</div>`;
+  if (r.type === "select") return `<select data-k="${r.k}">${r.o.map(([a, b]) => `<option value="${a}" ${a === v ? "selected" : ""}>${b}</option>`).join("")}</select>`;
+  if (r.type === "swatch") return `<div class="swatches" data-k="${r.k}">${r.o.map(a => `<button class="swatch ${a === v ? "on" : ""}" data-v="${a}" data-accent="${a}" style="background:linear-gradient(135deg,var(--a1),var(--a2))"></button>`).join("")}</div>`;
+  if (r.type === "range") return `<input type="range" data-k="${r.k}" min="${r.min}" max="${r.max}" step="${r.step}" value="${v}"><span class="rv-val">${r.fmt(v)}</span>`;
+  if (r.type === "folder") return `<input class="pathin" data-k="${r.k}" value="${esc(v || H.default_out_dir || "")}" ${window.pywebview?.api ? "readonly" : ""} spellcheck="false"><button class="btn gh sm" data-act="browse">${window.pywebview?.api ? "בחירה…" : "שמירה"}</button><button class="btn gh sm" data-act="defdir">ברירת מחדל</button>`;
+  if (r.type === "update") return `<span class="chip" dir="ltr" id="ytv">${esc(H.ytdlp_version || "—")}</span><button class="btn gh sm" data-act="update">בדיקת עדכון</button>`;
+  return "";
+}
+function renderSettings() {
+  $("#sbody").innerHTML = GROUPS.map((g, gi) => `<div class="sgroup" style="animation:rise .55s var(--ease) both;animation-delay:${gi * 70}ms"><h3>${g.t}</h3><div class="card" style="padding:6px 20px;margin:0">${g.rows.map(r => `<div class="srow"><div class="tx"><b>${r.l}</b>${r.d ? `<span>${r.d}</span>` : ""}</div><div class="ctl">${ctl(r)}</div></div>`).join("")}</div></div>`).join("");
+  $$("#sbody .swatch").forEach(s => s.style.setProperty("--a1", { violet: "#7c5cff", blue: "#3b82f6", teal: "#10b981", rose: "#f43f5e", amber: "#f59e0b" }[s.dataset.accent])), $$("#sbody .swatch").forEach(s => s.style.setProperty("--a2", { violet: "#d355ff", blue: "#22d3ee", teal: "#06b6d4", rose: "#fb923c", amber: "#ef4444" }[s.dataset.accent]));
+  requestAnimationFrame(() => $$("#sbody .seg").forEach(moveThumb));
+}
+$("#sbody").addEventListener("click", async e => {
+  const t = e.target.closest("button"); if (!t) return;
+  if (t.classList.contains("sw")) { const k = t.dataset.k, v = !S[k]; t.classList.toggle("on", v); setSetting(k, v); return; }
+  const seg = t.closest(".seg"), sw = t.closest(".swatches");
+  if (seg && t.dataset.v) { $$("button", seg).forEach(b => b.classList.toggle("on", b === t)); moveThumb(seg); setSetting(seg.dataset.k, t.dataset.v); return; }
+  if (sw && t.dataset.v) { $$(".swatch", sw).forEach(b => b.classList.toggle("on", b === t)); setSetting("accent", t.dataset.v); return; }
+  if (t.dataset.act === "browse") { const inp = t.parentElement.querySelector(".pathin"); if (window.pywebview?.api) { const p = await window.pywebview.api.choose_folder(); if (p) { inp.value = p; setSetting("out_dir", p); } } else setSetting("out_dir", inp.value.trim()); }
+  if (t.dataset.act === "defdir") { setSetting("out_dir", ""); t.parentElement.querySelector(".pathin").value = H.default_out_dir || ""; }
+  if (t.dataset.act === "update") { t.disabled = true; t.textContent = "בודק…"; try { const r = await api("/api/update", {}); toast(r.message, r.ok ? "ok" : "bad"); if (r.version) { H.ytdlp_version = r.version; $("#ytv").textContent = r.version; } } catch (er) { toast(er.message, "bad"); } t.disabled = false; t.textContent = "בדיקת עדכון"; }
+});
+$("#sbody").addEventListener("change", e => { const k = e.target.dataset.k; if (!k) return; if (e.target.tagName === "SELECT") setSetting(k, e.target.value); else if (e.target.classList.contains("pathin") && !e.target.readOnly) setSetting(k, e.target.value.trim()); });
+$("#sbody").addEventListener("input", e => { const r = e.target; if (r.type !== "range") return; const row = GROUPS.flatMap(g => g.rows).find(x => x.k === r.dataset.k); r.nextElementSibling.textContent = row.fmt(+r.value); setSetting(r.dataset.k, +r.value, true); });
+$("#sreset").onclick = async () => { try { const d = await api("/api/settings"); const r = await api("/api/settings", d.defaults); S = r.settings; applyTheme(); renderSettings(); toast("ההגדרות אופסו", "ok"); } catch (e) { toast(e.message, "bad"); } };
+
+/* ---------- אודות ---------- */
+function renderAbout() {
+  $("#kv").innerHTML = [["גרסה", H.version + (H.portable ? " (ניידת)" : "")], ["yt-dlp", H.ytdlp_version || "לא נמצא"], ["FFmpeg", H.ffmpeg ? "מותקן" : "לא נמצא"], ["תיקיית הורדות", H.out_dir], ["תיקיית נתונים", H.data_dir]].map(([a, b]) => `<dt>${a}</dt><dd>${esc(b)}</dd>`).join("");
+  $("#quit").style.display = H.shell === "browser" ? "" : "none";
+}
+$("#openout").onclick = () => api("/api/open-folder", {}).catch(e => toast(e.message, "bad"));
+$("#quit").onclick = () => api("/api/quit", {}).then(() => { document.body.innerHTML = '<div style="display:grid;place-items:center;height:100vh;color:#999">התוכנה נסגרה. אפשר לסגור את החלון.</div>'; });
+
+/* ---------- קונפטי ---------- */
+function burst() {
+  if (S.animations === false) return; const c = $("#fx"), x = c.getContext("2d"); c.width = innerWidth; c.height = innerHeight;
+  const cols = ["#7c5cff", "#d355ff", "#22d3ee", "#f43f9a", "#fbbf24", "#34d399"], P = Array.from({ length: 90 }, () => ({ x: innerWidth / 2 + (Math.random() - .5) * 200, y: innerHeight * .62, vx: (Math.random() - .5) * 15, vy: -Math.random() * 16 - 6, s: 4 + Math.random() * 6, r: Math.random() * 6, vr: (Math.random() - .5) * .5, c: cols[Math.random() * cols.length | 0] }));
+  let f = 0; (function step() { x.clearRect(0, 0, c.width, c.height); P.forEach(p => { p.vy += .5; p.x += p.vx; p.y += p.vy; p.r += p.vr; x.save(); x.translate(p.x, p.y); x.rotate(p.r); x.fillStyle = p.c; x.globalAlpha = Math.max(0, 1 - f / 90); x.fillRect(-p.s / 2, -p.s / 3, p.s, p.s * .6); x.restore(); }); if (++f < 95) requestAnimationFrame(step); else x.clearRect(0, 0, c.width, c.height); })();
+}
+
+/* ---------- אתחול ---------- */
+(async function init() {
+  $("#teeth").innerHTML = Array.from({ length: 9 }, (_, i) => { const y = 52 + i * 11.5; return `<rect class="tl" x="110" y="${y}" width="19" height="7" rx="2.5"/><rect class="tr" x="127" y="${y + 5.7}" width="19" height="7" rx="2.5"/>`; }).join("");
+  $("#bigicon").innerHTML = '<use href="#ic"/>';
+  try { [H, S] = await Promise.all([api("/api/health"), api("/api/settings").then(r => r.settings)]); } catch (e) { toast(e.message, "bad"); return; }
+  applyTheme(); quality = S.default_video_quality || "1080"; setMode(S.default_mode || "both");
+  if (!H.ytdlp) H.warn = "רכיב yt-dlp חסר. התקינו מחדש את התוכנה."; else if (!H.ffmpeg) H.warn = "רכיב FFmpeg חסר: חיבור וידאו+אודיו והמרה ל-MP3 לא יעבדו.";
+  if (H.warn) { $("#warn").textContent = H.warn; $("#warn").classList.add("show"); }
+  try { const h = await api("/api/history"); const n = h.items.length; } catch {}
+  poll(); addEventListener("resize", () => $$(".seg").forEach(moveThumb));
+  setTimeout(() => $$(".seg").forEach(moveThumb), 80); $("#url").focus();
+})();
+</script>
+</body>
+</html>
